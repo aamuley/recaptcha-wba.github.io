@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Live reCAPTCHA Enterprise Test</title>
+
+  <!-- Load Google reCAPTCHA Enterprise Script -->
+  <script src="https://www.google.com/recaptcha/enterprise.js?render=6LeX_YOUR_KEY_HERE"></script>
+
+  <!-- Load our real live API connector -->
+  <script src="verify.js"></script>
+
+  <style>
+    body {
+      font-family: sans-serif;
+      max-width: 500px;
+      margin: 50px auto;
+      padding: 20px;
+      line-height: 1.5;
+    }
+
+    .card {
+      border: 1px solid #ccc;
+      padding: 20px;
+      border-radius: 8px;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    }
+
+    button {
+      background: #1a73e8;
+      color: white;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    button:disabled {
+      background: #cccccc;
+      cursor: not-allowed;
+    }
+
+    #log {
+      background: #202124;
+      color: #f1f3f4;
+      padding: 12px;
+      margin-top: 20px;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      white-space: pre-wrap;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .success {
+      color: #137333;
+      background: #e6f4ea;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+
+    .error {
+      color: #c5221f;
+      background: #fce8e6;
+      padding: 10px;
+      border-radius: 4px;
+      margin-top: 15px;
+      font-weight: bold;
+    }
+  </style>
+</head>
+
+<body>
+
+  <div class="card">
+    <h2>Live reCAPTCHA Bot Verification Test</h2>
+    <button id="actionBtn" onclick="runProtectedAction()">Re-run reCAPTCHA assessment</button>
+    <script
+      src="https://www.google.com/recaptcha/enterprise.js?render=6LdRK9wsAAAAACwkb0s-xNxM7ZcaM2tsplzOXD-6"></script>
+
+
+    <div id="status"></div>
+    <div id="log">Logs initialized...</div>
+  </div>
+
+  <script>
+    const SITE_KEY = "6LdRK9wsAAAAACwkb0s-xNxM7ZcaM2tsplzOXD-6";
+    const ACTION_NAME = "homepage";
+
+    function logMessage(msg) {
+      const logBox = document.getElementById('log');
+      logBox.innerText += "\n" + msg;
+      logBox.scrollTop = logBox.scrollHeight;
+    }
+
+    async function runProtectedAction() {
+      const btn = document.getElementById('actionBtn');
+      const statusDiv = document.getElementById('status');
+      btn.disabled = true;
+      statusDiv.removeAttribute('class');
+      statusDiv.innerHTML = '';
+
+      logMessage("[Frontend] Generating reCAPTCHA Enterprise client token...");
+
+      grecaptcha.enterprise.ready(async () => {
+        try {
+          // 1. Get client token locally
+          const token = await grecaptcha.enterprise.execute(SITE_KEY, { action: ACTION_NAME });
+          logMessage(`[Frontend] Token received: ${token.substring(0, 25)}...`);
+
+          // 2. Call the live Google assessment pipeline
+          logMessage("[API] Dispatching payload directly to Google Cloud Assessment Endpoint...");
+          const response = await createRecaptchaAssessment(token, SITE_KEY, ACTION_NAME);
+
+          // 3. Output structural text responses and booleans
+          logMessage(`[API] Raw Mapping Response: ${JSON.stringify(response)}`);
+
+          if (response.valid && response.score >= 0.3) {
+            statusDiv.className = "success";
+            statusDiv.innerHTML = `blocked=false ${JSON.stringify(response)}`;
+          } else {
+            statusDiv.className = "error";
+            statusDiv.innerHTML = `blocked=true ${JSON.stringify(response)}`;
+          }
+
+        } catch (error) {
+          logMessage(`[Fatal Error] ${error.message}`);
+        } finally {
+          btn.disabled = false;
+        }
+      });
+    }
+
+    window.addEventListener("load", (event) => {
+      runProtectedAction();
+    });
+
+  </script>
+
+</body>
+
+</html>
