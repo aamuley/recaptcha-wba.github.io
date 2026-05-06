@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>reCAPTCHA Plaintext Demo</title>
+    <script
+        src="https://www.google.com/recaptcha/enterprise.js?render=6LdRK9wsAAAAACwkb0s-xNxM7ZcaM2tsplzOXD-6"></script>
+
+    <style>
+        body {
+            font-family: monospace;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+
+        pre {
+            background: white;
+            padding: 15px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>reCAPTCHA Assessment </h1>
+    <button id="verify-btn">Re-run Assessment</button>
+    <div id="output-container" style="display:none;">
+        <h3>Response:</h3>
+        <pre id="output"></pre>
+    </div>
+
+    <script>
+        const siteKey = "6LdRK9wsAAAAACwkb0s-xNxM7ZcaM2tsplzOXD-6";
+        const btn = document.getElementById('verify-btn');
+        const output = document.getElementById('output');
+        const container = document.getElementById('output-container');
+
+        async function runAssessment() {
+            btn.disabled = true;
+            output.innerText = "Loading...";
+            container.style.display = 'block';
+
+            grecaptcha.enterprise.ready(async () => {
+                try {
+                    const token = await grecaptcha.enterprise.execute(siteKey, { action: 'load' });
+                    const response = await fetch('/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ token, action: 'load' })
+                    });
+                    const text = await response.text();
+                    output.innerText = text;
+                } catch (err) {
+                    output.innerText = "Error: " + err.message;
+                } finally {
+                    btn.disabled = false;
+                }
+            });
+        }
+
+        window.addEventListener('load', runAssessment);
+        btn.addEventListener('click', runAssessment);
+    </script>
+</body>
+
+</html>
